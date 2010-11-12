@@ -1,4 +1,4 @@
-/**
+/**	
  * jQuery.maxRows
  * 
  * Limiting Maximum rows of content in textarea
@@ -6,7 +6,7 @@
  * Copyright (c) 2010 Vladimir Savenkov <iVariable@gmail.com>
  * Licensed under the MIT (http://www.opensource.org/licenses/mit-license.php) licenses.
  * 
- * Version: 0.1b
+ * Version: 0.2
  *
  * Demo and documentation: (LINK)
  */
@@ -14,12 +14,23 @@
 	
 	var helpers = {
 		
-		determineMaxRowsByHeight: function(){
-						
+		determineMaxRowsByHeight: function( height, clone ){
+			var text = '';
+			clone.height(height).val(text).scrollTop(10000);
+			var scrollHeight = clone.scrollTop();
+			var rows = 0;
+			while( scrollHeight < height ){
+				rows++;text += "1\n";
+				scrollHeight = clone.val(text).scrollTop();
+			}			
+			return rows;
 		},
 		
-		determineMaxHeightByRows: function( rows ){
-			
+		determineMaxHeightByRows: function( rows, clone ){
+			var text = '';
+			for(var i=0; i<rows; i++)text += "1\n";
+			clone.height(0).val(text).scrollTop(10000);
+			return clone.scrollTop()-1;						
 		}		
 		
 	}
@@ -45,44 +56,45 @@
 			return this.each(function(){		
 				var $this = textarea = $(this);
 				if( $this.attr('type') != 'textarea' ) return;
-								
+
+				// Need clone of textarea, hidden off screen:
+                var clone = (function(){
+                    
+                    // Properties which may effect space taken up by chracters:
+                    var props = ['height','width','lineHeight','textDecoration','letterSpacing'],
+                        propOb = {};
+                        
+                    // Create object of styles to apply:
+                    $.each(props, function(i, prop){
+                        propOb[prop] = textarea.css(prop);
+                    });
+                    
+                    // Clone the actual textarea removing unique properties
+                    // and insert before original textarea:
+                    return textarea.clone().removeAttr('id').removeAttr('name').css({
+                        position: 'absolute',
+                        top: 0,
+                        left: -9999,
+						resize:'none',
+						'overflow-y':'hidden'
+                    }).css(propOb).attr('tabIndex','-1').insertBefore(textarea);
+					
+                })()
+
+				
 				var maxHeight = 0;
 				var maxRowsThis = maxRows;
 				if (maxRowsThis == -1) {
-					maxRowsThis = helpers.determineMaxRowsByHeight.apply( $this );
-					maxHeight = $this.attr('offsetHeight');					
+					maxHeight = $this.attr('offsetHeight');
+					maxRowsThis = helpers.determineMaxRowsByHeight.apply( $this, [maxHeight, clone] );
 				}else{
-					maxHeight = helpers.determineMaxHeightByRows.apply( $this, [maxRowsThis] );
+					maxHeight = helpers.determineMaxHeightByRows.apply( $this, [maxRowsThis, clone] );
 				};	
 				
 				$this.unbind( '.maxrows' );
 				$this.removeData( 'maxRows' ).removeData( 'maxHeight' ).removeData( 'clone' );
 				
-				if( maxRowsThis != 0 ){	
-					
-					// Need clone of textarea, hidden off screen:
-	                var clone = (function(){
-	                    
-	                    // Properties which may effect space taken up by chracters:
-	                    var props = ['height','width','lineHeight','textDecoration','letterSpacing'],
-	                        propOb = {};
-	                        
-	                    // Create object of styles to apply:
-	                    $.each(props, function(i, prop){
-	                        propOb[prop] = textarea.css(prop);
-	                    });
-	                    
-	                    // Clone the actual textarea removing unique properties
-	                    // and insert before original textarea:
-	                    return textarea.clone().removeAttr('id').removeAttr('name').css({
-	                        position: 'absolute',
-	                        top: 0,
-	                        left: -9999,
-							resize:'none',
-							'overflow-y':'hidden'
-	                    }).css(propOb).attr('tabIndex','-1').insertBefore(textarea);
-						
-	                })()
+				if( maxRowsThis != 0 ){					
 					
 					var checkSize = function() {						
 						$this = $(this);						
@@ -104,7 +116,9 @@
 					
 					$this.data('maxRows', maxRowsThis);
 					$this.data('maxHeight', maxHeight);
-					$this.data('clone', clone);					
+					$this.data('clone', clone);
+					
+					$this.trigger( 'keydown.maxrows' );
 				}				
 				
 			});

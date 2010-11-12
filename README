@@ -1,3 +1,10 @@
 jQuery plugin for limiting maximum rows of content in textareas.
 
 Better description will be here later :)
+
+ChangeLog:
+0.2
+* maxRows full implementation (by rows, not only by textarea height)
+
+0.1
+* limiting rows by textarea height(offsetHeight) only.
